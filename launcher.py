@@ -1,189 +1,208 @@
 # -*- coding: utf-8 -*-
 from Tkinter import *
+from _winreg import *
 import Tkconstants
 from tkFileDialog import *
 import tkMessageBox
+from urllib import *
 import os, sys
 
-font = ("Curlz MT", 12, "bold")
+font = ("Curlz MT", 8, "bold")
+
+userhome = os.path.expanduser('~')
+
+def getFolderSize(folder):
+    total_size = os.path.getsize(folder)
+    for item in os.listdir(folder):
+        itempath = os.path.join(folder, item)
+        if os.path.isfile(itempath):
+            total_size += os.path.getsize(itempath)
+        elif os.path.isdir(itempath):
+            total_size += getFolderSize(itempath)
+    return total_size
+
+
+
+def autosearch(autoway, reg_value):
+	aReg = ConnectRegistry(None,HKEY_LOCAL_MACHINE)
+	aKey = OpenKey(aReg, autoway,0 ,KEY_READ | KEY_WOW64_64KEY)
+	val = QueryValueEx(aKey, reg_value)
+	val = str(val)
+	CloseKey(aReg)
+	line = val.translate(None, "(),u'")
+	line = line[:-2]
+	#print line
+	return line
+
+regtsway = r"SOFTWARE\TeamSpeak 3 Client"
+rega3way = r"SOFTWARE\Wow6432Node\bohemia interactive\arma 3"
+reg_value_ts = None
+reg_value_a3 = "main"
+
 
 try:
-	lconfig = open("layncherconfig.txt", "r")
-	#lconfigarray = text_file.read().split(',')
-	lconfigarray = lconfig.read().split(',')
-	#print "uspeshno prochitan"
-	#print lconfigarray
-	#lconfigarray = eval(lconfigarray)
-	#global fsdpath
-	#global tspath
-	#global a3path
+	way_to_a3 = autosearch(rega3way, reg_value_a3)
+	print way_to_a3
 except:
-	firstarr = "Ваша папка с аддонами FSD,Ваша папка с Тимспиком,Ваша папка с Армой"
-	lconfigarray = firstarr.split(',')
-	lconfig = open("layncherconfig.txt", "w")
-	lconfig.write(firstarr)
-	print "fail"
-
-#print lconfigarray
-#lconfig.close()
-fsdpath = lconfigarray[0]
-tspath = lconfigarray[1]
-a3path = lconfigarray[2]
-lconfig.close()
-
-def searchfsd():
-    # Get the file
-	global fsdpath
-	fsdpath = askdirectory()
-	if fsdpath == "":
-		tkMessageBox.showinfo('Title','Вы не указали папку с аддонами')
-		fsdpath = ""
-		return None
-	var1.set(fsdpath) 
-	lconfigarray[0] = str(fsdpath)
-	#print lconfigarray[0]
-	gogo = str(",".join(lconfigarray))
-	#print gogo
-	lconfig = open("layncherconfig.txt", "w") 
-	lconfig.write(gogo)
-	lconfig.close()
-	root.update()
-
-
-
-
-
-def searchteamspeak():
-    # Get the file
-	global tspath
-	tspath = askdirectory()
-	teamspeakpath = tspath + '/ts3client_win64.exe'
-	teamspeakpath2 = tspath + '/ts3client_win32.exe'
-	#print teamspeakpath2
-	if not (os.path.exists(teamspeakpath) or os.path.exists(teamspeakpath2)):
-		tkMessageBox.showinfo('Title','Вы указали неверную папку')
-		tspath = ""
-		return None
-	var2.set(tspath)
-	lconfigarray[1] = str(tspath)
-	#print lconfigarray[0]
-	gogo = str(",".join(lconfigarray))
-	#print gogo
-	lconfig = open("layncherconfig.txt", "w") 
-	lconfig.write(gogo)
-	lconfig.close()
-	root.update()
-
+	print "autoa3path fail"
 	
-def searcharma3():
-	global a3path
-    # Get the file
-	a3path = askdirectory()
-	arma3exepath = a3path + '/arma3.exe'
-	#print arma3exepath
-	if not os.path.exists(arma3exepath):
-		tkMessageBox.showinfo('Title','Вы указали неверную папку')
-		a3path = ""
-		return None
-	var3.set(a3path)
-	lconfigarray[2] = str(a3path)
-	#print lconfigarray[0]
-	gogo = str(",".join(lconfigarray))
-	#print gogo
-	lconfig = open("layncherconfig.txt", "w") 
-	lconfig.write(gogo)
-	lconfig.close()
-	root.update()
+try:
+	way_to_ts = autosearch(regtsway, reg_value_ts )
+	print way_to_ts
+except:
+	print "autotspath fail"
 
-def updatetf():
+
+way_to_fsd1 = way_to_a3 + "\\@fsd"
+way_to_fsd2 = way_to_a3 + "\\fsd"
+if os.path.isdir(way_to_fsd1):
+	print way_to_fsd1
+	way_to_fsd = way_to_fsd1
+elif os.path.isdir(way_to_fsd2):
+	print way_to_fsd2
+	way_to_fsd = way_to_fsd2
+else:
+	print "notfound"
+	tkMessageBox.showinfo('Title','Папка с аддонами FSD не найдена, укажите ее вручную')
+	way_to_fsd = askdirectory()
+	way_to_fsd = way_to_fsd.replace("/","\\")
+	print way_to_fsd
+
+def norm_fucking_path(fuckingpath):
+	fuckingpath = fuckingpath.replace("\\","/")
+	fuckingpath = os.path.normpath(fuckingpath)
+	return fuckingpath
+	
+
+def updateall():
+	tkMessageBox.showinfo('Title','Закройте тимспик, если он открыт')
 	# ОБНОВЛЯЕМ ТИМСПИК
-	try: 
-		tfpath = tspath
-	except:
-		tkMessageBox.showinfo('Title','Укажите сначала папку с тимспиком')
-		return None
-	plugpath = lconfigarray[0] + '/TeamSpeak3/plugins'
-	print plugpath
-	plugpathbat = plugpath.replace("/","\\") 
-	print plugpathbat
-	installpath = lconfigarray[1] + '/plugins'
-	installpathbat = installpath.replace("/","\\")
-	fots = open("tfupdtae.bat", "w")
+	way_to_addons_plugins = way_to_fsd + "\\TeamSpeak3\\plugins"
+	way_to_addons_plugins = norm_fucking_path(way_to_addons_plugins)
+	way_to_ts_plugins = way_to_ts + "\\plugins"
+	way_to_ts_plugins = norm_fucking_path(way_to_ts_plugins)
+	if not (os.path.isdir(way_to_addons_plugins)):
+		tkMessageBox.showinfo('Title','Папка с плагинами FSD для тимспика не найдена')
+		return
 	S = 'S'
-	fots.write('echo "All" | XCOPY "' + plugpathbat + '" "' + installpathbat + '" /' + S) #echo "Y" | XCOPY "E:\VBS\@fsd2\TeamSpeak3\plugins" "E:\VBS\@fsd4\plugins" /S
-	fots.close()
-	os.startfile('tfupdtae.bat')
 	# ОБНОВЛЯЕМ ЮЗЕРКОНФИГ
-	print "nachalo"
-	userconfigpathfrom = lconfigarray[0] + '/userconfig'
-	userconfigpathto = lconfigarray[2] + '/userconfig'
-	if not (os.path.exists(userconfigpathto)):
-		os.mkdir(userconfigpathto)
-	userconfigpathfrombat = userconfigpathfrom.replace("/","\\")
-	userconfigpathfromto = userconfigpathto.replace("/","\\")
-	print "epered otkr"
-	fouc = open("userconinst.bat", "w")
-	S = 'S'
-	fouc.write('echo "All" | XCOPY "' + userconfigpathfrombat + '" "' + userconfigpathfromto + '" /' + S) #echo "Y" | XCOPY "E:\VBS\@fsd2\TeamSpeak3\plugins" "E:\VBS\@fsd4\plugins" /S
-	fouc.close()
-	os.startfile('userconinst.bat')
-	
-		
+	way_to_addons_userconfig = way_to_fsd + "\\userconfig"
+	way_to_addons_userconfig = norm_fucking_path(way_to_addons_userconfig)
+	way_to_arma3 = way_to_a3 + "\\userconfig"
+	way_to_arma3 = norm_fucking_path(way_to_arma3)
+	if not (os.path.isdir(way_to_addons_userconfig)):
+		tkMessageBox.showinfo('Title','Папка с userconfig в папке с аддонами FSD не найдена')
+		return
+	if not (os.path.isdir(way_to_arma3)):
+		os.mkdir(way_to_arma3)
+	desktop_update_path = userhome + "\\Desktop\\" + "\\UPDATE_ALL.bat"
+	desktop_update_path = norm_fucking_path(desktop_update_path)
+	all_installer = open(desktop_update_path, "w")
+	all_installer.write('echo "All" | XCOPY "' + way_to_addons_userconfig + '" "' + way_to_arma3 + '" /' + S + '\n') #echo "Y" | XCOPY "E:\VBS\@fsd2\TeamSpeak3\plugins" "E:\VBS\@fsd4\plugins" /S
+	all_installer.write('echo "All" | XCOPY "' + way_to_addons_plugins + '" "' + way_to_ts_plugins + '" /' + S)
+	all_installer.close()
+	os.startfile(desktop_update_path)
+	tkMessageBox.showinfo('ВНИМАНИЕ','Windows Не всегда позволяет обновлять файлы, находящтеся на диске C,поэтому на рабочем столе создан файл UPDATE_ALL.bat , запустите его от имени администратора, если обновление через лаунчер не удалось')
 	
 def start_arma():
-	path_f = []
-	# filename = str(filename)
-	# os.path.normpath(filename)
+	addons_list = []
+	ask_site = tkMessageBox.askyesno("Title", "Запросить список аддонов с сайта FSD? ")
+	if ask_site == True:
+		try:
+			url_addons_link = "http://rangertesting.esy.es/urlmodpath.txt"
+			for line in urlopen(url_addons_link):
+				#print line
+				addons_list.append(line)
+				addons_list[:] = [line.rstrip('\n') for line in addons_list]
+			print addons_list
+			#lconfig = open("layncherconfig.txt", "r")
+			#lconfigarray = text_file.read().split(',')
+		except:
+			tkMessageBox.showinfo('Title','Не получилось запросить список аддонов из инета')
+			addons_list = [i for i in os.listdir(way_to_fsd) if i.startswith('@') if os.path.isdir(os.path.join(way_to_fsd, i))]
+	else:
+		addons_list = [i for i in os.listdir(way_to_fsd) if i.startswith('@') if os.path.isdir(os.path.join(way_to_fsd, i))]
+	#print addons_list
+	modfirst = 'start "" "' + way_to_a3 + r'\\arma3.exe"' + r' -mod="' + way_to_fsd +'\\'
+	mod = r'" -mod="' + way_to_fsd +'\\'
+	list2 = modfirst + mod.join(addons_list) + '"'
+	#list2 = ['-mod=filename\%s' % x for x in addons_list]
+	aga = str(list2)
+	list3 = aga.translate(None, "()[],u'")
+	list4 = norm_fucking_path(list2) + " -nosplash -world=empty -skipIntro"
+	print list4
+	fo = open("kaka.bat", "w")
+	fo.write(list4)
+	fo.close()
+	arma3_install_path = way_to_a3 + "\\FSD.bat"
+	arma3_install_path = norm_fucking_path(arma3_install_path)
+	#print arma3_install_path
+	fo_arma3 = open(arma3_install_path, "w")
+	fo_arma3.write(list4)
+	fo_arma3.close()
+	#userhome = os.path.expanduser('~')
+	desktop_icon_path = userhome + "\\Desktop\\" + "\\FSD.bat"
+	desktop_icon_path = norm_fucking_path(desktop_icon_path)
+	#print desktop_icon_path
+	fo_desktop = open(desktop_icon_path, "w")
+	fo_desktop.write(list4)
+	fo_desktop.close()
+	ask_launch = tkMessageBox.askyesno("Title", "Ярлык создан,  запустить арму с аддонами FSD?")
+	if ask_launch == True:
+		os.startfile('kaka.bat')
+		quit()
+	else:
+		return
+		
+		
+def diagnos():
+	# ДИАГНОСТИКА
+	#addons_list_diagnosis = [i for i in os.listdir(way_to_fsd) if i.endswith('.pbo')]
+	#print addons_list_diagnosis
+	sizelist = []
+	silzelist_names = []
+	for dirpath, dirnames, filenames in os.walk(way_to_fsd):
+		dirnames[:] = [d for d in dirnames if not d.startswith('.')]
+		for filename in [f for f in filenames if f.endswith(".pbo")]:
+			sizelist.append(dirpath + "\\" + filename)
+			silzelist_names.append(filename)
+	numberss = [ norm_fucking_path(x) for x in sizelist ]
+	#print numberss
+	sizelist_new = []
+	for i in range(len(numberss)):
+		sizelist_new.append(str(silzelist_names[i]) + " size: " + (str(os.path.getsize(numberss[i]))))
+	print sizelist_new
+	fo_compare = open("addons_list.txt", "w")
+	for item in sizelist_new:
+		fo_compare.write("%s\n" % item)
+	fo_compare.close()
+	"""
+	ask_d_list = tkMessageBox.askyesno("Title", "ВЫ КАПИТАН ГАЛАКТИКА?, Отвечайте честно, от этого зависит работа диагностической утилиты!")
+	if ask_d_list == True:
+		fo_compare_admin = open("addons_list_admin.txt", "w")
+		for item in sizelist_new:
+			fo_compare_admin.write("%s\n" % item)
+		fo_compare_admin.close()
+	else:
+		return
+	"""
 	try:
-		cc = fsdpath
+		fo_compare_admin_new = open("addons_list_admin.txt", "r")
+		sizelist_admin = fo_compare_admin_new.read().split('\n')
+		del sizelist_admin[-1]
+
+		subset=set(sizelist_new).difference(sizelist_admin)
+
+		print u"НЕСОВПАДЕНИЕ НАЙДЕНЫ В СЛЕДУЮЩИХ ПАПКАХ " + str(subset)
+		if str(subset) == "set([])":
+			tkMessageBox.showinfo('Title',u"НЕСОВПАДЕНИЯ НЕ НАЙДЕНЫ")
+		else:
+			tkMessageBox.showinfo('Title',u"НЕСОВПАДЕНИЕ НАЙДЕНЫ В СЛЕДУЮЩИХ ПАПКАХ " + str(subset))
+		fo_compare_admin_new.close()
 	except:
-		tkMessageBox.showinfo('Title','Вы не указали папку с аддонами')
-		return None
-	try:
-		ccb = a3path
-	except:
-		tkMessageBox.showinfo('Title','Вы не указали папку c Армой')
-		return None
-	cc = fsdpath.replace("/","\\") 
-	ccb = a3path.replace("/","\\") 
-	filename = cc
-	arma3filename = '"' + ccb + r'\arma3.exe' + '"'
-	print arma3filename
-	# path = os.path.join(a, filename)
-	dirs = os.listdir(filename)
-	for file in dirs:
-		print file
-		path_f.append(file)
-
-	path_f2 = [i for i in range(len(path_f)) if path_f[i].startswith('@')]
-
-	#print path_f2
-
-	T = []
-	for i in path_f2:
-		T.append(path_f[i])
-
-	mod = r'" -mod="' + filename +'\\'
-	modfirst = r' -mod="' + filename +'\\'
-	#list2 = ['-mod=filename\%s' % x for x in T]
-	#print (list2)
-	modlist = mod.join(T) + '"'
-	#print T
-	#print modlist
-	modlist = modfirst + modlist
-	arma3final = a3path + '/arma3.bat'
-	# arma3final
-	# arma3fibalbat = a3path.replace("/","\\")
-	fo = open(arma3final, "w")
-	fo.write('start "" ' + arma3filename + modlist)
-	path = []
-	path_f = []
-	path_f2 = []
-	root.update()
-	tkMessageBox.showinfo('Title','Ярлык успешно создан')
-
-
-
+		tkMessageBox.showinfo('Title',"Файл со сверочным листом аддонов не найден")
+	
+	
 
 	
 def center_window(w=300, h=200):
@@ -195,41 +214,10 @@ def center_window(w=300, h=200):
     y = (hs/2) - (h/2)
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 root = Tk()
-center_window(350, 200)
-root.columnconfigure(0,weight=1000)
-root.columnconfigure(1,weight=1000)
-#root.geometry("300x150")
-var1 = StringVar()
-try: 
-	var1.set(fsdpath)
-except:
-	var1.set('Ваша папка с аддонами FSD:')
-var2 = StringVar()
-try: 
-	var2.set(tspath)
-except:
-	var2.set('Ваша папка с Тимспиком:')
-var3 = StringVar()
-try: 
-	var3.set(a3path)
-except:
-	var3.set('Ваша папка с Армой 3:')
-#globalfsd = StringVar()
-theLabel1 = Label(root, textvariable=var1, bg = 'grey').grid(row=0,column=0, padx = 1, pady = 2)
-button1 = Button(root, text="Указать папку", command = searchfsd).grid(row=0,column=1, padx = 1, pady = 2)
+root.title("Ranger FSD launcher")
+center_window(270, 200)
 
-theLabel2 = Label(root, textvariable=var2, bg = 'grey').grid(row=1,column=0, padx = 1, pady = 2)
-button2 = Button(root, text="Указать папку", command = searchteamspeak).grid(row=1,column=1, padx = 1, pady = 2)
-
-theLabel3 = Label(root, textvariable=var3, bg = 'grey').grid(row=2,column=0, padx = 1, pady = 2)
-button3 = Button(root, text="Указать папку", command = searcharma3).grid(row=2,column=1, padx = 1, pady = 2)
-
-button4 = Button(root, text="Установить(Обновить) Таскфорс и Userconfig",height=2, command = updatetf).grid(rowspan = 2, columnspan = 2, sticky='nsew', padx = 5, pady = 5)
-button5 = Button(root, text="Cоздать Ярлык / Запустить Арму 3",height=2,font=font, command = start_arma).grid(rowspan = 2, columnspan = 2, sticky='nsew', padx = 5, pady = 0)
-
-
-
-
-
-
+button4 = Button(root, text="Установить(Обновить) Таскфорс и Userconfig",height=3, command = updateall).grid(rowspan = 1, sticky='nsew', padx = 5, pady = 5)
+button5 = Button(root, text="Cоздать Ярлык / Запустить Арму 3",height=3, font = font, command = start_arma).grid(rowspan = 2, sticky='nsew', padx = 5, pady = 5)
+button5 = Button(root, text="Диагностика",height=3, command =diagnos).grid(rowspan = 3, sticky='nsew', padx = 5, pady = 5)
 root.mainloop()
